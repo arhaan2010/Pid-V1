@@ -3,12 +3,23 @@
 
 MPU6050 mpu;
 
-float kp = 1.5, ki = 0.1, kd = 0.1;
+float kp = 0.9, ki = 0.1, kd = 0.1;
 float error = 0, previouserror = 0;
 float integral = 0, derivative = 0;
 float pidoutput;
-float yawangle =0;
-unsigned long previous_time =0;
+float yawangle = 0;
+unsigned long previous_time = 0;
+const int wheeldia =67;
+const float wheelc =3.141592653589793*67;
+int estimaterpm  = 168;
+void cal(float distance){
+  float distancemm =distance*10;
+  float numofrev = distancemm/wheelc;
+  float timeperrev=60.0/estimaterpm;
+  float totaltimesec  = numofrev* timeperrev;
+  unsigned long totaltimems = totaltimesec*1000;
+  controlmotor('f',totaltimems);
+}
 
 
 
@@ -26,41 +37,36 @@ const int ena = 3;
 const int enb = 5;
 
 //Variable declare
-void turn(float target_angle){
-  yawangle=0;
-  unsigned long currenttime =millis();
+void turn(float target_angle) {
+  yawangle = 0;
+  unsigned long currenttime = millis();
   previous_time = currenttime;
-  while(abs(target_angle- yawangle)>1){
-    currenttime =millis();
-    float deltatime = (currenttime-previous_time)/1000;
-    previous_time =currenttime;
+  while (abs(target_angle - yawangle) > 1.0) {
+    currenttime = millis();
+    float deltatime = (currenttime - previous_time) / 1000.0;
+    previous_time = currenttime;
     readgyro();
-    yawangle+=yawrate*deltatime;
-    int turnspeed= 200;
-    analogWrite(ena,turnspeed);
-    analogWrite(enb,turnspeed);
-    if (target_angle>yawangle){
-       Serial.println("in F");
-        digitalWrite(m1a, HIGH);
-        digitalWrite(m1b, LOW);
-        digitalWrite(m2a, HIGH);
-        digitalWrite(m2b, LOW);
-        break;
-    }
-    else{
+    yawangle += yawrate * deltatime;
+    Serial.println(yawangle);
+    int turnspeed = 150;
+    analogWrite(ena, turnspeed);
+    analogWrite(enb, turnspeed);
+    if (target_angle > yawangle) {
       digitalWrite(m1a, HIGH);
-        digitalWrite(m1b, LOW);
-        digitalWrite(m2a, LOW);
-        digitalWrite(m2b, HIGH);
-        break;
-
+      digitalWrite(m1b, LOW);
+      digitalWrite(m2a, HIGH);
+      digitalWrite(m2b, LOW);
+    } else {
+      digitalWrite(m1a, HIGH);
+      digitalWrite(m1b, LOW);
+      digitalWrite(m2a, LOW);
+      digitalWrite(m2b, HIGH);
     }
-
   }
-  controlmotor("s",0);
-  turn(90);
-
-
+      digitalWrite(m1a, LOW);
+      digitalWrite(m1b, LOW);
+      digitalWrite(m2a, LOW);
+      digitalWrite(m2b, LOW);
 }
 void PID() {
   readgyro();
@@ -68,7 +74,7 @@ void PID() {
   integral += error;
   derivative = error - previouserror;
 
-  pidoutput = kp* error + ki* integral + kd* derivative;
+  pidoutput = kp * error + ki * integral + kd * derivative;
   previouserror = error;
 
   int basespeed = 200;
@@ -103,6 +109,7 @@ void setup() {
 
 
   mpu.initialize();
+  mpu.setFullScaleGyroRange(MPU6050_GYRO_FS_500);
 
   if (!mpu.testConnection()) {
     Serial.println("MPU not Connected ");
@@ -122,7 +129,11 @@ void setup() {
 
   Serial.println("Calibration Complete");
 
-  controlmotor('f', 10000);
+  // controlmotor('f', 1000);
+  cal(100);
+  
+
+  //turn(90);
 }
 
 void readgyro() {
@@ -137,11 +148,10 @@ void controlmotor(char cmd, long duration) {
   unsigned long starttime = millis();
   unsigned long currenttime;
 
-  while ((currenttime = millis()) - starttime < duration){ 
+  while ((currenttime = millis()) - starttime < duration) {
     PID();
     switch (cmd) {
       case 'r':
-        Serial.println("in F");
         digitalWrite(m1a, HIGH);
         digitalWrite(m1b, LOW);
         digitalWrite(m2a, HIGH);
@@ -176,8 +186,14 @@ void controlmotor(char cmd, long duration) {
         return;
     }
   }
+      digitalWrite(m1a, LOW);
+        digitalWrite(m1b, LOW);
+        digitalWrite(m2a, LOW);
+        digitalWrite(m2b, LOW);
+
 }
 void loop() {
+
   // readgyro();
   // Serial.println(yawrate);
   // delay(200);
