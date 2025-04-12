@@ -13,6 +13,7 @@ unsigned long previous_time =0;
 
 
 
+
 //Variable declare
 float yawrate = 0;
 float calibratedyawrate = 0;
@@ -27,7 +28,37 @@ const int enb = 5;
 //Variable declare
 void turn(float target_angle){
   yawangle=0;
+  unsigned long currenttime =millis();
+  previous_time = currenttime;
+  while(abs(target_angle- yawangle)>1){
+    currenttime =millis();
+    float deltatime = (currenttime-previous_time)/1000;
+    previous_time =currenttime;
+    readgyro();
+    yawangle+=yawrate*deltatime;
+    int turnspeed= 200;
+    analogWrite(ena,turnspeed);
+    analogWrite(enb,turnspeed);
+    if (target_angle>yawangle){
+       Serial.println("in F");
+        digitalWrite(m1a, HIGH);
+        digitalWrite(m1b, LOW);
+        digitalWrite(m2a, HIGH);
+        digitalWrite(m2b, LOW);
+        break;
+    }
+    else{
+      digitalWrite(m1a, HIGH);
+        digitalWrite(m1b, LOW);
+        digitalWrite(m2a, LOW);
+        digitalWrite(m2b, HIGH);
+        break;
 
+    }
+
+  }
+  controlmotor("s",0);
+  turn(90);
 
 
 }
@@ -109,7 +140,7 @@ void controlmotor(char cmd, long duration) {
   while ((currenttime = millis()) - starttime < duration){ 
     PID();
     switch (cmd) {
-      case 'l':
+      case 'r':
         Serial.println("in F");
         digitalWrite(m1a, HIGH);
         digitalWrite(m1b, LOW);
@@ -118,15 +149,15 @@ void controlmotor(char cmd, long duration) {
         break;
 
       case 'f':
-        digitalWrite(m1a, LOW);
-        digitalWrite(m1b, HIGH);
+        digitalWrite(m1a, HIGH);
+        digitalWrite(m1b, LOW);
         digitalWrite(m2a, LOW);
         digitalWrite(m2b, HIGH);
         break;
 
-      case 'r':
-        digitalWrite(m1a, HIGH);
-        digitalWrite(m1b, LOW);
+      case 'l':
+        digitalWrite(m1a, LOW);
+        digitalWrite(m1b, HIGH);
         digitalWrite(m2a, LOW);
         digitalWrite(m2b, HIGH);
         break;
